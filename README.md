@@ -1,58 +1,114 @@
-<h1>Active Directory Home Lab</h1>
+# Active Directory Project with Windows Server 2019 and VirtualBox
 
- ### [YouTube Demonstration](https://youtu.be/7eJexJVCqJo)
+This project sets up an Active Directory (AD) environment with 1,000 users using Windows Server 2019 and VirtualBox. The setup is designed for a network using NAT (Network Address Translation) for internet access and an internal network for local traffic.
 
-<h2>Description</h2>
-Project consists of a simple PowerShell script that walks the user through "zeroing out" (wiping) any drives that are connected to the system. The utility allows you to select the target disk and choose the number of passes that are performed. The PowerShell script will configure a diskpart script file based on the user's selections and then launch Diskpart to perform the disk sanitization.
-<br />
+## Prerequisites
 
+1. **VirtualBox**: Installed on your host machine.
+2. **Windows Server 2019 ISO**: Available for installation.
+3. **Windows  10 ISO**: Available for installation.
+4. **System Requirements**:
+   - Minimum of 8 GB RAM and 100 GB disk space for the virtual machine.
+   - Host machine with at least 16 GB RAM.
+5. **Active Directory Planning**:
+   - Domain Name: `mydomain.com`
+   - Organizational Units (OUs): Predefined as needed.
+   - User details: Script to generate 1,000 users.
 
-<h2>Languages and Utilities Used</h2>
+## Network Configuration
 
-- <b>PowerShell</b> 
-- <b>Diskpart</b>
+### NAT Network
+- Provides internet access to the virtual machine.
+- Configured within VirtualBox under **File > Preferences > Network > NAT Networks**.
 
-<h2>Environments Used </h2>
+### Internal Network
+- Facilitates local traffic between virtual machines.
+- Configured as an **Internal Network** in VirtualBox.
 
-- <b>Windows 10</b> (21H2)
+## Setup Steps
 
-<h2>Program walk-through:</h2>
+### 1. Create and Configure Virtual Machine
 
-<p align="center">
-Launch the utility: <br/>
-<img src="https://i.imgur.com/62TgaWL.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Select the disk:  <br/>
-<img src="https://i.imgur.com/tcTyMUE.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Enter the number of passes: <br/>
-<img src="https://i.imgur.com/nCIbXbg.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Confirm your selection:  <br/>
-<img src="https://i.imgur.com/cdFHBiU.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Wait for process to complete (may take some time):  <br/>
-<img src="https://i.imgur.com/JL945Ga.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Sanitization complete:  <br/>
-<img src="https://i.imgur.com/K71yaM2.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-<br />
-<br />
-Observe the wiped disk:  <br/>
-<img src="https://i.imgur.com/AeZkvFQ.png" height="80%" width="80%" alt="Disk Sanitization Steps"/>
-</p>
+1. Open VirtualBox and create a new VM:
+   - Name: `DC`
+   - Type: Microsoft Windows
+   - Version: Windows Server 2019 (64-bit)
+2. Assign resources:
+   - Memory: 2 GB (minimum)
+   - Hard Disk: 50 GB dynamically allocated.
+3. Attach Windows Server 2019 ISO to the virtual DVD drive.
+4. Configure network adapters:
+   - Adapter 1: NAT
+   - Adapter 2: Internal Network
 
-<!--
- ```diff
-- text in red
-+ text in green
-! text in orange
-# text in gray
-@@ text in purple (and bold)@@
+### 2. Install Windows Server 2019
+1. Boot the VM and follow the on-screen instructions to install Windows Server 2019.
+2. Choose **Desktop Experience** when prompted.
+3. Set an Administrator password after installation.
+
+### 3. Configure Network Settings
+
+#### Adapter 1 (NAT):
+1. Go to **Control Panel > Network and Sharing Center > Change Adapter Settings**.
+2. Set the adapter to obtain IP and DNS addresses automatically.
+
+#### Adapter 2 (Internal):
+1. Assign a static IP address (e.g., `172.16.0.1`).
+2. Subnet Mask: `255.255.255.0`.
+
+### 4. Install and Configure Active Directory
+1. Open **Server Manager** and add the **Active Directory Domain Services** role.
+2. Promote the server to a domain controller:
+   - Select "Add a new forest" and enter `mydomain` as the domain name.
+   - Complete the wizard and restart the server.
+
+### 5. Create 1,000 Users
+1. Use PowerShell to create users in bulk:
+
+```$PASSWORD_FOR_USERS   = "Password1"
+$USER_FIRST_LAST_LIST = Get-Content .\names.txt
+# ------------------------------------------------------ #
+
+$password = ConvertTo-SecureString $PASSWORD_FOR_USERS -AsPlainText -Force
+New-ADOrganizationalUnit -Name _USERS -ProtectedFromAccidentalDeletion $false
+
+foreach ($n in $USER_FIRST_LAST_LIST) {
+    $first = $n.Split(" ")[0].ToLower()
+    $last = $n.Split(" ")[1].ToLower()
+    $username = "$($first.Substring(0,1))$($last)".ToLower()
+    Write-Host "Creating user: $($username)" -BackgroundColor Black -ForegroundColor Cyan
+    
+    New-AdUser -AccountPassword $password `
+               -GivenName $first `
+               -Surname $last `
+               -DisplayName $username `
+               -Name $username `
+               -EmployeeID $username `
+               -PasswordNeverExpires $true `
+               -Path "ou=_USERS,$(([ADSI]`"").distinguishedName)" `
+               -Enabled $true
+}
 ```
---!>
+
+2. Customize the script as needed for specific attributes.
+
+## Testing the Setup
+1. Verify AD functionality:
+   - Use **Active Directory Users and Computers** to view users and OUs.
+2. Test NAT connectivity:
+   - Ping external websites from the VM.
+3. Test internal network:
+   - Set up another VM on the internal network and ping the AD server.
+
+## Troubleshooting
+
+1. **Network Issues**:
+   - Ensure the NAT adapter is correctly configured in VirtualBox.
+   - Check firewall settings on Windows Server.
+2. **User Creation**:
+   - Verify PowerShell scripts for errors.
+   - Ensure the Active Directory module is installed.
+
+## Additional Resources
+- [Windows Server 2019 Documentation](https://docs.microsoft.com/en-us/windows-server/)
+- [VirtualBox Networking Guide](https://www.virtualbox.org/manual/ch06.html)
