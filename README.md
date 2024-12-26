@@ -8,7 +8,7 @@ This project sets up an Active Directory (AD) environment with 1,000 users using
 2. **Windows Server 2019 ISO**: Available for installation.
 3. **Windows  10 ISO**: Available for installation.
 4. **System Requirements**:
-   - Minimum of 8 GB RAM and 100 GB disk space for the virtual machine.
+   - Minimum of 4 GB RAM and 100 GB disk space for the virtual machines.
    - Host machine with at least 16 GB RAM.
 5. **Active Directory Planning**:
    - Domain Name: `mydomain.com`
